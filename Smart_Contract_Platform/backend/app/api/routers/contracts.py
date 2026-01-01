@@ -34,6 +34,9 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db), u: C
         contract_price=payload.contract_price,
         performance_bond=performance_bond(payload.tender_price),
         approved_budget=payload.approved_budget,
+        clauses=payload.clauses,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
         completion_ratio=0.0,
         paid_total=0.0,
         status="DRAFT",
@@ -45,8 +48,13 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db), u: C
     return ContractOut(**c.__dict__)
 
 @router.get("", response_model=list[ContractOut])
-def list_contracts(db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):
-    items = contract_list(db)
+def list_contracts(
+    contract_no: str | None = None,
+    contract_name: str | None = None,
+    db: Session = Depends(get_db),
+    u: CurrentUser = Depends(get_current_user)
+):
+    items = contract_list(db, contract_no=contract_no, contract_name=contract_name)
     res = []
     for c in items:
         if can_view(u, c):
@@ -73,6 +81,12 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
         c.project_name = payload.project_name
     if payload.approved_budget is not None:
         c.approved_budget = payload.approved_budget
+    if payload.clauses is not None:
+        c.clauses = payload.clauses
+    if payload.start_date is not None:
+        c.start_date = payload.start_date
+    if payload.end_date is not None:
+        c.end_date = payload.end_date
     c = contract_update(db, c)
     audit_add(db, u.username, "UPDATE", "Contract", str(c.id), "update contract")
     return ContractOut(**c.__dict__)

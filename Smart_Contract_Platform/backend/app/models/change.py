@@ -28,6 +28,7 @@ class ChangeApprovalTask(Base):
     step_order: Mapped[int] = mapped_column(Integer)
     step_name: Mapped[str] = mapped_column(String(64))  # 科员/科长/处长/局长/特批
     assignee_role: Mapped[str] = mapped_column(String(64))
+    required_level: Mapped[str | None] = mapped_column(String(32), nullable=True)  # 需要的级别：SECTION_CHIEF(科长), DIRECTOR(处长), BUREAU_CHIEF(局长)
     status: Mapped[str] = mapped_column(String(32), default="PENDING") # PENDING/APPROVED/REJECTED/SKIPPED
     comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
     action_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+demo.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.pnpm-debug.log*
+
+# 前端构建产物
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 操作系统
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# 项目特定（如有需要可添加）
+

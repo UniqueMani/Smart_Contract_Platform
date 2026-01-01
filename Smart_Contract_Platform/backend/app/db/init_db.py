@@ -7,20 +7,29 @@ from app.core.security import get_password_hash
 from app.services.rules import performance_bond
 
 def create_all():
+    # 删除所有表（用于开发环境，重新创建表结构）
+    Base.metadata.drop_all(bind=engine)
+    # 创建所有表
     Base.metadata.create_all(bind=engine)
 
 def seed(db: Session):
     # users
-    def upsert_user(username: str, password: str, role: str, company: str | None = None):
+    def upsert_user(username: str, password: str, role: str, company: str | None = None, level: str | None = None):
         u = db.query(User).filter(User.username == username).first()
         if u:
+            if level is not None:
+                u.level = level
             return
-        db.add(User(username=username, hashed_password=get_password_hash(password), role=role, company=company, is_active=True))
+        db.add(User(username=username, hashed_password=get_password_hash(password), role=role, company=company, level=level, is_active=True))
 
     upsert_user("owner_contract", "Owner123!", "OWNER_CONTRACT", company="发包方A")
     upsert_user("owner_finance", "Finance123!", "OWNER_FINANCE", company="发包方A")
     upsert_user("owner_legal", "Legal123!", "OWNER_LEGAL", company="发包方A")
-    upsert_user("owner_leader", "Leader123!", "OWNER_LEADER", company="发包方A")
+    
+    # 添加不同级别的领导用户
+    upsert_user("owner_leader", "Leader123!", "OWNER_LEADER", company="发包方A", level="BUREAU_CHIEF")  # 局长
+    upsert_user("owner_leader_section", "Section123!", "OWNER_LEADER", company="发包方A", level="SECTION_CHIEF")  # 科长
+    upsert_user("owner_leader_director", "Director123!", "OWNER_LEADER", company="发包方A", level="DIRECTOR")  # 处长
     upsert_user("contractor", "Contractor123!", "CONTRACTOR", company="承包方B")
     upsert_user("supervisor", "Supervisor123!", "SUPERVISOR", company="监理单位C")
     upsert_user("auditor", "Auditor123!", "AUDITOR", company="审计机构D")

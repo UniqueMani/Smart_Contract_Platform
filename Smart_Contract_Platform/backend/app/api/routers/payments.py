@@ -5,7 +5,7 @@ import random
 
 from app.core.deps import get_current_user, require_roles, CurrentUser
 from app.db.session import get_db
-from app.schemas.payment import PaymentCreate, PaymentOut, PaymentCalcOut
+from app.schemas.payment import PaymentCreate, PaymentOut, PaymentCalcOut, PaymentReject
 from app.models.payment import PaymentRequest
 from app.crud.crud_payment import payment_create, payment_get, payment_list
 from app.crud.crud_contract import contract_get, contract_update
@@ -105,17 +105,19 @@ def finance_approve(payment_id: int, db: Session = Depends(get_db), u: CurrentUs
     calc = calc_payment(c.approved_budget, c.completion_ratio, c.paid_total)
 
     if p.amount > calc.max_apply + 1e-6:
-        p.status = "BLOCKED"
-        db.add(p); db.commit(); db.refresh(p)
+        # 不改变状态，保持在FINANCE_REVIEW，但标记为被拦截
+        p.is_blocked = True
         over = round(p.amount - calc.max_apply, 2)
         msg = (f"申请金额超出可申请最大金额 {over} 元；"
                f"依据：批复概算={c.approved_budget}，完工比例={c.completion_ratio}，"
                f"可支付额度={calc.payable_limit}，已支付累计={c.paid_total}，"
                f"可申请最大金额={calc.max_apply}，申请金额={p.amount}")
+        p.reject_reason = msg
+        db.add(p); db.commit(); db.refresh(p)
         notify_create(db, "owner_contract", "超额支付预警单（demo）", f"{p.code}：{msg}")
         notify_create(db, p.created_by, "支付申请被拦截（超概算）", f"{p.code}：{msg}")
         audit_add(db, u.username, "BLOCK", "Payment", str(p.id), msg)
-        return {"ok": False, "status": p.status, "reason": msg}
+        return {"ok": False, "status": p.status, "is_blocked": True, "reason": msg}
 
     # 通过 -> 视为已支付
     p.status = "PAID"
@@ -128,12 +130,13 @@ def finance_approve(payment_id: int, db: Session = Depends(get_db), u: CurrentUs
     return {"ok": True, "status": p.status}
 
 @router.post("/{payment_id}/review/finance/reject")
-def finance_reject(payment_id: int, db: Session = Depends(get_db), u: CurrentUser = Depends(require_roles("OWNER_FINANCE","ADMIN"))):
+def finance_reject(payment_id: int, payload: PaymentReject, db: Session = Depends(get_db), u: CurrentUser = Depends(require_roles("OWNER_FINANCE","ADMIN"))):
     p = payment_get(db, payment_id)
     if not p:
         raise HTTPException(404, "not found")
     p.status = "REJECTED"
+    p.reject_reason = payload.reject_reason
     db.add(p); db.commit(); db.refresh(p)
-    notify_create(db, p.created_by, "支付申请被驳回", f"{p.code} 已被驳回（demo）")
-    audit_add(db, u.username, "REJECT", "Payment", str(p.id), "finance reject")
+    notify_create(db, p.created_by, "支付申请被驳回", f"{p.code} 已被驳回：{payload.reject_reason}")
+    audit_add(db, u.username, "REJECT", "Payment", str(p.id), f"finance reject: {payload.reject_reason}")
     return {"ok": True, "status": p.status}

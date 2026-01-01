@@ -26,6 +26,7 @@ class ChangeTaskOut(BaseModel):
     step_order: int
     step_name: str
     assignee_role: str
+    required_level: str | None = None
     status: str
     comment: str | None = None
     action_at: datetime | None = None

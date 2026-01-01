@@ -17,6 +17,8 @@ class PaymentOut(BaseModel):
     progress_desc: str
     period: str
     status: str
+    is_blocked: bool = False
+    reject_reason: str | None = None
     created_by: str
     created_at: datetime
 
@@ -26,3 +28,6 @@ class PaymentCalcOut(BaseModel):
     paid_total: float
     payable_limit: float
     max_apply: float
+
+class PaymentReject(BaseModel):
+    reject_reason: str

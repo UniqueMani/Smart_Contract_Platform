@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Float, DateTime, ForeignKey, Integer
+from sqlalchemy import String, Float, DateTime, ForeignKey, Integer, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -15,6 +15,8 @@ class PaymentRequest(Base):
     period: Mapped[str] = mapped_column(String(32), default="")  # e.g., 2025-12
 
     status: Mapped[str] = mapped_column(String(32), default="DRAFT") # DRAFT/SUBMITTED/CONTRACT_REVIEW/FINANCE_REVIEW/BLOCKED/PAID/REJECTED
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)  # 是否被拦截（超额）
+    reject_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)  # 驳回理由
     created_by: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

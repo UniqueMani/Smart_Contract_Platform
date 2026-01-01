@@ -9,6 +9,7 @@ from app.schemas.change import ChangeCreate, ChangeOut, ChangeTaskOut, TaskActio
 from app.models.change import ChangeRequest
 from app.crud.crud_change import change_create, change_get, change_list, task_get, tasks_for_change
 from app.crud.crud_contract import contract_get, contract_update
+from app.crud.crud_user import user_get_by_username
 from app.services.workflow import build_change_tasks, next_pending_task, is_all_approved
 from app.crud.crud_notification import notify_create
 from app.crud.crud_audit import audit_add
@@ -85,8 +86,17 @@ def approve_task(task_id: int, payload: TaskAction, db: Session = Depends(get_db
     t = task_get(db, task_id)
     if not t:
         raise HTTPException(404, "task not found")
-    if u.role not in ("ADMIN", t.assignee_role):
+    
+    # 权限检查：管理员或角色匹配
+    if u.role != "ADMIN" and u.role != t.assignee_role:
         raise HTTPException(403, "forbidden")
+    
+    # 级别检查：如果任务需要特定级别，检查用户级别
+    if t.required_level is not None and u.role != "ADMIN":
+        user = user_get_by_username(db, u.username)
+        if not user or user.level != t.required_level:
+            raise HTTPException(403, f"需要级别 {t.required_level}，当前用户级别不匹配")
+    
     if t.status != "PENDING":
         raise HTTPException(400, "task already handled")
 
@@ -124,8 +134,17 @@ def reject_task(task_id: int, payload: TaskAction, db: Session = Depends(get_db)
     t = task_get(db, task_id)
     if not t:
         raise HTTPException(404, "task not found")
-    if u.role not in ("ADMIN", t.assignee_role):
+    
+    # 权限检查：管理员或角色匹配
+    if u.role != "ADMIN" and u.role != t.assignee_role:
         raise HTTPException(403, "forbidden")
+    
+    # 级别检查：如果任务需要特定级别，检查用户级别
+    if t.required_level is not None and u.role != "ADMIN":
+        user = user_get_by_username(db, u.username)
+        if not user or user.level != t.required_level:
+            raise HTTPException(403, f"需要级别 {t.required_level}，当前用户级别不匹配")
+    
     if t.status != "PENDING":
         raise HTTPException(400, "task already handled")
 
