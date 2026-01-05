@@ -22,7 +22,9 @@ def seed(db: Session):
             return
         db.add(User(username=username, hashed_password=get_password_hash(password), role=role, company=company, level=level, is_active=True))
 
-    upsert_user("owner_contract", "Owner123!", "OWNER_CONTRACT", company="发包方A")
+    # 科员账号（审批流程第一步）
+    upsert_user("owner_staff", "Staff123!", "OWNER_CONTRACT", company="发包方A")  # 科员
+    upsert_user("owner_contract", "Owner123!", "OWNER_CONTRACT", company="发包方A")  # 合同管理员（也可作为科员）
     upsert_user("owner_finance", "Finance123!", "OWNER_FINANCE", company="发包方A")
     upsert_user("owner_legal", "Legal123!", "OWNER_LEGAL", company="发包方A")
     

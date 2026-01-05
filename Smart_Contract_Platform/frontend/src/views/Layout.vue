@@ -16,12 +16,13 @@
       </div>
 
       <el-menu class="side-menu" :default-active="$route.path" router>
-        <el-menu-item index="/">仪表盘</el-menu-item>
+        <el-menu-item index="/">首页</el-menu-item>
+        <el-menu-item index="/dashboard">仪表盘</el-menu-item>
         <el-menu-item index="/contracts">合同</el-menu-item>
         <el-menu-item index="/changes">变更</el-menu-item>
         <el-menu-item index="/payments">进度款</el-menu-item>
 
-        <el-menu-item v-if="['OWNER_FINANCE','OWNER_CONTRACT','ADMIN'].includes(auth.role)" index="/finance">
+        <el-menu-item v-if="['OWNER_FINANCE','OWNER_CONTRACT','OWNER_LEGAL','ADMIN'].includes(auth.role)" index="/finance">
           审核（合同/财务）
         </el-menu-item>
 
@@ -29,7 +30,6 @@
           工程量/完工比例
         </el-menu-item>
 
-        <el-menu-item index="/notifications">通知</el-menu-item>
         <el-menu-item v-if="['ADMIN','AUDITOR','OWNER_CONTRACT','OWNER_FINANCE','OWNER_LEGAL','OWNER_LEADER'].includes(auth.role)" index="/audits">
           审计日志
         </el-menu-item>

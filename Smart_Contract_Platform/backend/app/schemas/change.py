@@ -33,3 +33,8 @@ class ChangeTaskOut(BaseModel):
 
 class TaskAction(BaseModel):
     comment: str | None = None
+
+class ChangeWithTaskOut(BaseModel):
+    """变更申请及其待审核任务信息"""
+    change: ChangeOut
+    task: ChangeTaskOut

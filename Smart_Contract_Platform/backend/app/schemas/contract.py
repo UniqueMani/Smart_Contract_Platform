@@ -41,3 +41,6 @@ class ContractUpdate(BaseModel):
     clauses: str | None = None
     start_date: datetime | None = None
     end_date: datetime | None = None
+
+class ContractReject(BaseModel):
+    reason: str | None = None

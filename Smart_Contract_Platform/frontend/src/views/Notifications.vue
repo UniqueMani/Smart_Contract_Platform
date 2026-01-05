@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="通知" subtitle="关键节点提醒（审批流转、支付结果、超概算拦截等）">
+    <PageHeader title="首页通知" subtitle="关键节点提醒（审批流转、支付结果、超概算拦截等）">
       <el-button size="small" @click="load">刷新</el-button>
     </PageHeader>
 

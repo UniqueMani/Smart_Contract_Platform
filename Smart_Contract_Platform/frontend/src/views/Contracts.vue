@@ -6,6 +6,20 @@
       </el-button>
     </PageHeader>
 
+    <div style="margin-bottom: 16px;">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索合同名称或合同号"
+        clearable
+        style="width: 300px;"
+        @input="handleSearch"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+    </div>
+
     <el-table :data="rows" border style="width:100%;">
       <el-table-column prop="contract_no" label="合同号" width="140" />
       <el-table-column prop="contract_name" label="合同名称" />
@@ -28,18 +42,29 @@ import { onMounted, ref } from 'vue'
 import http from '../api/http'
 import { useAuthStore } from '../store/auth'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import PageHeader from '../components/PageHeader.vue'
 
 const auth = useAuthStore()
 const rows = ref([])
+const searchKeyword = ref('')
 
 async function load(){
   try{
-    const { data } = await http.get('/contracts')
+    const params = {}
+    if (searchKeyword.value.trim()) {
+      params.search = searchKeyword.value.trim()
+    }
+    const { data } = await http.get('/contracts', { params })
     rows.value = data
   }catch(e){
     ElMessage.error('加载失败')
   }
 }
+
+function handleSearch() {
+  load()
+}
+
 onMounted(load)
 </script>

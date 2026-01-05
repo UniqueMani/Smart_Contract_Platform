@@ -10,6 +10,7 @@ import ContractDetail from '../views/ContractDetail.vue'
 import Changes from '../views/Changes.vue'
 import Payments from '../views/Payments.vue'
 import FinanceReview from '../views/FinanceReview.vue'
+import LegalReview from '../views/LegalReview.vue'
 import Quantity from '../views/Quantity.vue'
 import Notifications from '../views/Notifications.vue'
 import Audits from '../views/Audits.vue'
@@ -20,7 +21,8 @@ const routes = [
     path: '/',
     component: Layout,
     children: [
-      { path: '', component: Dashboard },
+      { path: '', component: Notifications },
+      { path: 'dashboard', component: Dashboard },
 
       { path: 'contracts', component: Contracts },
       { path: 'contracts/new', component: ContractCreate, meta: { roles: ['OWNER_CONTRACT','ADMIN'] } },
@@ -28,10 +30,10 @@ const routes = [
 
       { path: 'changes', component: Changes },
       { path: 'payments', component: Payments },
-      { path: 'finance', component: FinanceReview, meta: { roles: ['OWNER_FINANCE','OWNER_CONTRACT','ADMIN'] } },
+      { path: 'finance', component: FinanceReview, meta: { roles: ['OWNER_FINANCE','OWNER_CONTRACT','OWNER_LEGAL','ADMIN'] } },
+      { path: 'legal', component: LegalReview, meta: { roles: ['OWNER_LEGAL','ADMIN'] } },
       { path: 'quantity', component: Quantity, meta: { roles: ['SUPERVISOR','ADMIN'] } },
 
-      { path: 'notifications', component: Notifications },
       { path: 'audits', component: Audits, meta: { roles: ['ADMIN','AUDITOR','OWNER_CONTRACT','OWNER_FINANCE','OWNER_LEGAL','OWNER_LEADER'] } },
     ]
   }
@@ -52,7 +54,7 @@ router.beforeEach(async (to) => {
   }
   const roles = to.meta?.roles
   if (roles && roles.length && !roles.includes(auth.role)) {
-    return '/' // 简化：无权限就回首页
+    return '/' // 简化：无权限就回首页（通知页面）
   }
 })
 

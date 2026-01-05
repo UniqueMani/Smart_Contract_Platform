@@ -75,10 +75,10 @@ const openTasks = ref(false)
 const loading = ref(false)
 
 const form = reactive({
-  amount: 180000,
-  reason: '新增排水管道施工',
-  scope_desc: '新增排水管道及附属工程',
-  schedule_impact_days: 7,
+  amount: 0,
+  reason: '',
+  scope_desc: '',
+  schedule_impact_days: 0,
 })
 
 async function load(){
@@ -91,14 +91,45 @@ function canAct(task){
 }
 
 async function create(){
+  // 表单验证
+  if (!props.contractId) {
+    ElMessage.error('合同ID缺失，请刷新页面重试')
+    return
+  }
+  if (!form.amount || form.amount <= 0) {
+    ElMessage.error('请输入有效的变更金额')
+    return
+  }
+  if (!form.reason || !form.reason.trim()) {
+    ElMessage.error('请输入变更原因')
+    return
+  }
+  if (!form.scope_desc || !form.scope_desc.trim()) {
+    ElMessage.error('请输入范围描述')
+    return
+  }
+  
   try{
     loading.value = true
-    await http.post('/changes', { ...form, contract_id: props.contractId })
+    await http.post('/changes', { 
+      contract_id: props.contractId,
+      amount: form.amount,
+      reason: form.reason.trim(),
+      scope_desc: form.scope_desc.trim(),
+      schedule_impact_days: form.schedule_impact_days || 0
+    })
     ElMessage.success('已提交变更申请')
     openCreate.value = false
+    // 重置表单
+    form.amount = 0
+    form.reason = ''
+    form.scope_desc = ''
+    form.schedule_impact_days = 0
     await load()
   }catch(e){
-    ElMessage.error(e?.response?.data?.detail || '提交失败')
+    const errorMsg = e?.response?.data?.detail || e?.message || '提交失败'
+    ElMessage.error(errorMsg)
+    console.error('提交变更申请失败:', e)
   }finally{
     loading.value = false
   }
