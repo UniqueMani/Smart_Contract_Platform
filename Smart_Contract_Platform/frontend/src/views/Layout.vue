@@ -22,7 +22,7 @@
         <el-menu-item index="/changes">变更</el-menu-item>
         <el-menu-item index="/payments">进度款</el-menu-item>
 
-        <el-menu-item v-if="['OWNER_FINANCE','OWNER_CONTRACT','OWNER_LEGAL','ADMIN'].includes(auth.role)" index="/finance">
+        <el-menu-item v-if="['OWNER_FINANCE','OWNER_CONTRACT','OWNER_LEGAL','OWNER_LEADER','ADMIN'].includes(auth.role)" index="/finance">
           审核（合同/财务）
         </el-menu-item>
 

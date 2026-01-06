@@ -19,5 +19,8 @@ def login(db: Session = Depends(get_db), form: OAuth2PasswordRequestForm = Depen
     return Token(access_token=token)
 
 @router.get("/me", response_model=UserOut)
-def me(u: CurrentUser = Depends(get_current_user)):
-    return UserOut(username=u.username, role=u.role, company=u.company)
+def me(u: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = user_get_by_username(db, u.username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserOut(username=user.username, role=user.role, company=user.company, level=user.level)

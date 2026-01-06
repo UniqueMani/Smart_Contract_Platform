@@ -89,7 +89,19 @@ async function create(){
     openCreate.value = false
     await load()
   }catch(e){
-    ElMessage.error(e?.response?.data?.detail || '提交失败')
+    // 提取详细的错误信息
+    let errorMsg = '提交失败'
+    if (e?.response?.data?.detail) {
+      errorMsg = e.response.data.detail
+    } else if (e?.response?.data?.message) {
+      errorMsg = e.response.data.message
+    } else if (e?.message) {
+      errorMsg = e.message
+    } else if (typeof e?.response?.data === 'string') {
+      errorMsg = e.response.data
+    }
+    ElMessage.error(errorMsg)
+    console.error('支付申请提交失败:', e)
   }finally{
     loading.value = false
   }

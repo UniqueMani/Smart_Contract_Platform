@@ -10,6 +10,6 @@ class QuantityRecord(Base):
     contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"))
     period: Mapped[str] = mapped_column(String(32))  # e.g. 2025-12
     completion_ratio: Mapped[float] = mapped_column(Float)  # 0~1
-    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    note: Mapped[str] = mapped_column(String(500))  # 描述内容（必填）
     created_by: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
