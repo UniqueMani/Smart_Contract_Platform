@@ -226,9 +226,20 @@ async function approve(row){
 }
 
 async function reject(row){
-  await http.post(`/payments/${row.id}/review/finance/reject`)
-  ElMessage.success('已驳回')
-  await load()
+  try {
+    const { value } = await ElMessageBox.prompt('请输入驳回原因', '财务驳回', { 
+      inputPlaceholder: '如：申请材料不完整',
+      confirmButtonText: '确认驳回',
+      cancelButtonText: '取消'
+    })
+    await http.post(`/payments/${row.id}/review/finance/reject`, { reject_reason: value })
+    ElMessage.success('已驳回')
+    await load()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.response?.data?.detail || '驳回失败')
+    }
+  }
 }
 
 function approveChange(row){

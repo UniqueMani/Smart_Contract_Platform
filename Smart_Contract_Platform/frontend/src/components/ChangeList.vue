@@ -87,7 +87,20 @@ async function load(){
 }
 
 function canAct(task){
-  return auth.role === 'ADMIN' || auth.role === task.assignee_role
+  // 管理员可以操作所有任务
+  if (auth.role === 'ADMIN') {
+    return true
+  }
+  // 检查角色是否匹配
+  if (auth.role !== task.assignee_role) {
+    return false
+  }
+  // 如果任务需要特定级别，检查用户级别是否匹配
+  if (task.required_level) {
+    return auth.level === task.required_level
+  }
+  // 如果任务不需要级别，只要角色匹配就可以
+  return true
 }
 
 async function create(){

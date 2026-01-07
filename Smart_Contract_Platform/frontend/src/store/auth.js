@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     role: (s) => s.me?.role || '',
     username: (s) => s.me?.username || '',
+    level: (s) => s.me?.level || null,
     isAuthed: (s) => !!s.token,
   },
   actions: {

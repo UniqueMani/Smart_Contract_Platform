@@ -135,10 +135,19 @@ async function create(){
       ElMessage.error('提交失败：响应格式异常')
     }
   }catch(e){
-    // 错误信息已由响应拦截器处理，这里直接显示错误消息
-    // 如果错误对象有 response，说明是服务器返回的错误
-    const errorMsg = e?.response?.data?.detail || e?.message || '提交失败'
+    // 提取详细的错误信息
+    let errorMsg = '提交失败'
+    if (e?.response?.data?.detail) {
+      errorMsg = e.response.data.detail
+    } else if (e?.response?.data?.message) {
+      errorMsg = e.response.data.message
+    } else if (e?.message) {
+      errorMsg = e.message
+    } else if (typeof e?.response?.data === 'string') {
+      errorMsg = e.response.data
+    }
     ElMessage.error(errorMsg)
+    console.error('录入完工比例失败:', e)
   }finally{
     loading.value = false
   }

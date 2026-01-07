@@ -30,7 +30,7 @@ const routes = [
 
       { path: 'changes', component: Changes },
       { path: 'payments', component: Payments },
-      { path: 'finance', component: FinanceReview, meta: { roles: ['OWNER_FINANCE','OWNER_CONTRACT','OWNER_LEGAL','ADMIN'] } },
+      { path: 'finance', component: FinanceReview, meta: { roles: ['OWNER_FINANCE','OWNER_CONTRACT','OWNER_LEGAL','OWNER_LEADER','ADMIN'] } },
       { path: 'legal', component: LegalReview, meta: { roles: ['OWNER_LEGAL','ADMIN'] } },
       { path: 'quantity', component: Quantity, meta: { roles: ['SUPERVISOR','ADMIN'] } },
 

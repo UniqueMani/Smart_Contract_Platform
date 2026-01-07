@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 import random
+import time
 
 from app.core.deps import get_current_user, require_roles, CurrentUser
 from app.db.session import get_db
@@ -15,34 +16,9 @@ from app.crud.crud_audit import audit_add
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
-def gen_code(prefix: str) -> str:
-    yyyy = datetime.utcnow().strftime("%Y")
-    rnd = random.randint(1, 999)
-    return f"{prefix}-{yyyy}-{rnd:03d}"
-
-@router.post("", response_model=PaymentOut)
-def create_payment(payload: PaymentCreate, db: Session = Depends(get_db), u: CurrentUser = Depends(require_roles("CONTRACTOR", "ADMIN"))):
-    c = contract_get(db, payload.contract_id)
-    if not c:
-        raise HTTPException(404, "contract not found")
-    if u.role == "CONTRACTOR" and u.company and c.contractor_org != u.company:
-        raise HTTPException(403, "forbidden")
-
-    p = PaymentRequest(
-        code=gen_code("ZF"),
-        contract_id=payload.contract_id,
-        amount=payload.amount,
-        purpose=payload.purpose,
-        progress_desc=payload.progress_desc,
-        period=payload.period,
-        status="SUBMITTED",
-        created_by=u.username,
-        created_at=datetime.utcnow(),
-    )
-    p = payment_create(db, p)
-    notify_create(db, "owner_contract", "新的支付申请待审核", f"{p.code} 金额 {p.amount} 元")
-    audit_add(db, u.username, "CREATE", "Payment", str(p.id), f"submit payment {p.code}")
-    # 修复：直接访问属性而不是使用 __dict__
+def to_payment_out(p: PaymentRequest) -> PaymentOut:
+    """将 SQLAlchemy 模型转换为 Pydantic 模型"""
+    # 直接访问属性，避免 __dict__ 可能为空的问题
     return PaymentOut(
         id=p.id,
         code=p.code,
@@ -57,6 +33,70 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db), u: Cur
         created_by=p.created_by,
         created_at=p.created_at,
     )
+
+def gen_code(prefix: str, db: Session) -> str:
+    """生成唯一的支付单号，如果重复则重试"""
+    yyyy = datetime.utcnow().strftime("%Y")
+    max_attempts = 10
+    for _ in range(max_attempts):
+        rnd = random.randint(1, 999)
+        code = f"{prefix}-{yyyy}-{rnd:03d}"
+        # 检查是否已存在
+        existing = db.query(PaymentRequest).filter(PaymentRequest.code == code).first()
+        if not existing:
+            return code
+    # 如果10次都重复（极不可能），使用时间戳
+    return f"{prefix}-{yyyy}-{int(time.time()) % 10000:04d}"
+
+@router.post("", response_model=PaymentOut)
+def create_payment(payload: PaymentCreate, db: Session = Depends(get_db), u: CurrentUser = Depends(require_roles("CONTRACTOR", "ADMIN"))):
+    # 验证必填字段
+    if not payload.contract_id:
+        raise HTTPException(status_code=400, detail="合同ID不能为空")
+    if not payload.amount or payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="申请金额必须大于0")
+    if not payload.purpose or not payload.purpose.strip():
+        raise HTTPException(status_code=400, detail="支付事由不能为空")
+    
+    c = contract_get(db, payload.contract_id)
+    if not c:
+        raise HTTPException(status_code=404, detail=f"合同不存在 (ID: {payload.contract_id})")
+    if u.role == "CONTRACTOR" and u.company and c.contractor_org != u.company:
+        raise HTTPException(status_code=403, detail="无权操作此合同的支付申请")
+
+    try:
+        p = PaymentRequest(
+            code=gen_code("ZF", db),
+            contract_id=payload.contract_id,
+            amount=payload.amount,
+            purpose=payload.purpose,
+            progress_desc=payload.progress_desc or "",
+            period=payload.period or "",
+            status="FINANCE_REVIEW",  # 直接进入财务审核，不再经过合同审核
+            created_by=u.username,
+            created_at=datetime.utcnow(),
+        )
+        p = payment_create(db, p)
+        notify_create(db, "owner_finance", "新的支付申请待财务审核", f"{p.code} 金额 {p.amount} 元")
+        audit_add(db, u.username, "CREATE", "Payment", str(p.id), f"submit payment {p.code} -> FINANCE_REVIEW")
+        # 确保对象是最新的（因为 notify_create 和 audit_add 可能提交了事务）
+        db.refresh(p)
+        return to_payment_out(p)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        # 返回详细的错误信息
+        error_msg = str(e)
+        if "UNIQUE constraint failed" in error_msg or "unique constraint" in error_msg.lower():
+            raise HTTPException(status_code=400, detail="支付单号已存在，请稍后重试")
+        elif "FOREIGN KEY constraint failed" in error_msg or "foreign key constraint" in error_msg.lower():
+            raise HTTPException(status_code=400, detail="合同ID无效")
+        elif "NOT NULL constraint failed" in error_msg or "not null constraint" in error_msg.lower():
+            raise HTTPException(status_code=400, detail="必填字段不能为空")
+        else:
+            raise HTTPException(status_code=500, detail=f"创建支付申请失败: {error_msg}")
 
 @router.get("", response_model=list[PaymentOut])
 def list_payments(db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):
@@ -82,10 +122,10 @@ def list_payments(db: Session = Depends(get_db), u: CurrentUser = Depends(get_cu
             created_at=p.created_at,
         )
         if u.role in ("ADMIN","AUDITOR","OWNER_CONTRACT","OWNER_FINANCE","OWNER_LEGAL","OWNER_LEADER","SUPERVISOR"):
-            res.append(payment_out)
+            res.append(to_payment_out(p))
         elif u.role == "CONTRACTOR":
             if u.company is None or c.contractor_org == u.company:
-                res.append(payment_out)
+                res.append(to_payment_out(p))
     return res
 
 @router.get("/{payment_id}", response_model=PaymentOut)
@@ -93,21 +133,7 @@ def get_payment(payment_id: int, db: Session = Depends(get_db), u: CurrentUser =
     p = payment_get(db, payment_id)
     if not p:
         raise HTTPException(404, "not found")
-    # 修复：直接访问属性而不是使用 __dict__
-    return PaymentOut(
-        id=p.id,
-        code=p.code,
-        contract_id=p.contract_id,
-        amount=p.amount,
-        purpose=p.purpose,
-        progress_desc=p.progress_desc,
-        period=p.period,
-        status=p.status,
-        is_blocked=p.is_blocked,
-        reject_reason=p.reject_reason,
-        created_by=p.created_by,
-        created_at=p.created_at,
-    )
+    return to_payment_out(p)
 
 @router.get("/{payment_id}/calc", response_model=PaymentCalcOut)
 def get_calc(payment_id: int, db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):
