@@ -30,6 +30,24 @@ def get_client_ip(request: Request) -> str:
         return request.client.host
     return "unknown"
 
+def to_quantity_out(q: QuantityRecord) -> QuantityOut:
+    """将 SQLAlchemy 模型转换为 Pydantic 模型"""
+    # 直接访问属性，避免 __dict__ 可能为空的问题
+    return QuantityOut(
+        id=q.id,
+        contract_id=q.contract_id,
+        period=q.period,
+        completion_ratio=q.completion_ratio,
+        completion_description=q.completion_description,
+        note=q.note,
+        created_by=q.created_by,
+        created_at=q.created_at,
+        sealed=q.sealed,
+        sealed_by=q.sealed_by,
+        sealed_at=q.sealed_at,
+        sealed_ip=q.sealed_ip,
+    )
+
 @router.post("", response_model=QuantityOut)
 def create_quantity(
     payload: QuantityCreate, 
@@ -37,9 +55,17 @@ def create_quantity(
     db: Session = Depends(get_db), 
     u: CurrentUser = Depends(require_roles("SUPERVISOR","ADMIN"))
 ):
+    # 验证必填字段
+    if not payload.contract_id:
+        raise HTTPException(status_code=400, detail="合同ID不能为空")
+    if payload.completion_ratio is None or payload.completion_ratio < 0 or payload.completion_ratio > 1:
+        raise HTTPException(status_code=400, detail="完工比例必须在0~1之间")
+    if not payload.completion_description or not payload.completion_description.strip():
+        raise HTTPException(status_code=400, detail="完工情况描述不能为空")
+    
     c = contract_get(db, payload.contract_id)
     if not c:
-        raise HTTPException(status_code=404, detail="contract not found")
+        raise HTTPException(status_code=404, detail=f"合同不存在 (ID: {payload.contract_id})")
     
     # 如果提供了签章密码，验证当前登录用户的密码
     sealed = False
@@ -59,87 +85,31 @@ def create_quantity(
         sealed_at = datetime.utcnow()
         sealed_ip = get_client_ip(request)
     
-    q = QuantityRecord(
-        contract_id=payload.contract_id,
-        period=payload.period,
-        completion_ratio=payload.completion_ratio,
-        completion_description=payload.completion_description,
-        note=payload.note,
-        created_by=u.username,
-        created_at=datetime.utcnow(),
-        sealed=sealed,
-        sealed_by=sealed_by,
-        sealed_at=sealed_at,
-        sealed_ip=sealed_ip,
-    )
-    q = quantity_create(db, q)
-    # 同步到合同表（demo：用最新完工比例覆盖）
-    c.completion_ratio = payload.completion_ratio
-    contract_update(db, c)
-    
-    # 记录审计日志
-    audit_msg = f"set completion_ratio={payload.completion_ratio}"
-    if sealed:
-        audit_msg += f", sealed by {u.username}"
-    audit_add(db, u.username, "CREATE", "Quantity", str(q.id), audit_msg)
-    
-    # 将 SQLAlchemy 模型转换为 Pydantic 模型（直接访问属性）
-    return QuantityOut(
-        id=q.id,
-        contract_id=q.contract_id,
-        period=q.period,
-        completion_ratio=q.completion_ratio,
-        completion_description=q.completion_description,
-        note=q.note,
-        created_by=q.created_by,
-        created_at=q.created_at,
-        sealed=q.sealed,
-        sealed_by=q.sealed_by,
-        sealed_at=q.sealed_at,
-        sealed_ip=q.sealed_ip,
-    )
-
-def to_quantity_out(q: QuantityRecord) -> QuantityOut:
-    """将 SQLAlchemy 模型转换为 Pydantic 模型"""
-    # 直接访问属性，避免 __dict__ 可能为空的问题
-    return QuantityOut(
-        id=q.id,
-        contract_id=q.contract_id,
-        period=q.period,
-        completion_ratio=q.completion_ratio,
-        note=q.note,
-        created_by=q.created_by,
-        created_at=q.created_at,
-    )
-
-@router.post("", response_model=QuantityOut)
-def create_quantity(payload: QuantityCreate, db: Session = Depends(get_db), u: CurrentUser = Depends(require_roles("SUPERVISOR","ADMIN"))):
-    # 验证必填字段
-    if not payload.contract_id:
-        raise HTTPException(status_code=400, detail="合同ID不能为空")
-    if payload.completion_ratio is None or payload.completion_ratio < 0 or payload.completion_ratio > 1:
-        raise HTTPException(status_code=400, detail="完工比例必须在0~1之间")
-    if not payload.note or not payload.note.strip():
-        raise HTTPException(status_code=400, detail="备注不能为空")
-    
-    c = contract_get(db, payload.contract_id)
-    if not c:
-        raise HTTPException(status_code=404, detail=f"合同不存在 (ID: {payload.contract_id})")
-    
     try:
         q = QuantityRecord(
             contract_id=payload.contract_id,
             period=payload.period or "",
             completion_ratio=payload.completion_ratio,
+            completion_description=payload.completion_description,
             note=payload.note,
             created_by=u.username,
             created_at=datetime.utcnow(),
+            sealed=sealed,
+            sealed_by=sealed_by,
+            sealed_at=sealed_at,
+            sealed_ip=sealed_ip,
         )
         q = quantity_create(db, q)
         # 同步到合同表（demo：用最新完工比例覆盖）
         c.completion_ratio = payload.completion_ratio
         contract_update(db, c)
-        audit_add(db, u.username, "CREATE", "Quantity", str(q.id), f"set completion_ratio={payload.completion_ratio}")
+        
+        # 记录审计日志
+        audit_msg = f"set completion_ratio={payload.completion_ratio}"
+        if sealed:
+            audit_msg += f", sealed by {u.username}"
+        audit_add(db, u.username, "CREATE", "Quantity", str(q.id), audit_msg)
+        
         # 确保对象是最新的
         db.refresh(q)
         return to_quantity_out(q)

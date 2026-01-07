@@ -43,7 +43,11 @@
     <el-dialog v-model="openTasks" title="变更审批任务" width="700px">
       <el-table :data="tasks" border>
         <el-table-column prop="step_order" label="顺序" width="60" />
-        <el-table-column prop="step_name" label="节点" width="90" />
+        <el-table-column prop="step_name" label="节点" width="120">
+          <template #default="{ row }">
+            {{ row.step_name === '科员' ? '合同管理员' : row.step_name }}
+          </template>
+        </el-table-column>
         <el-table-column prop="assignee_role" label="角色" width="140" />
         <el-table-column prop="status" label="状态" width="110" />
         <el-table-column prop="comment" label="意见" />
@@ -109,8 +113,13 @@ async function create(){
     ElMessage.error('合同ID缺失，请刷新页面重试')
     return
   }
-  if (!form.amount || form.amount <= 0) {
-    ElMessage.error('请输入有效的变更金额')
+  if (form.amount === undefined || form.amount === null || form.amount < 0) {
+    ElMessage.error('变更金额不能为负数')
+    return
+  }
+  // 允许金额为0（可以只变更时间），但需要至少金额或时间有变更
+  if (form.amount === 0 && (!form.schedule_impact_days || form.schedule_impact_days === 0)) {
+    ElMessage.error('变更金额和时间不能同时为0，至少需要变更其中一项')
     return
   }
   if (!form.reason || !form.reason.trim()) {

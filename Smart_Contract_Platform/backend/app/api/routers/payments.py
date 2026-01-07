@@ -183,7 +183,7 @@ def finance_approve(payment_id: int, db: Session = Depends(get_db), u: CurrentUs
                f"可申请最大金额={calc.max_apply}，申请金额={p.amount}")
         p.reject_reason = msg
         db.add(p); db.commit(); db.refresh(p)
-        notify_create(db, "owner_contract", "超额支付预警单（demo）", f"{p.code}：{msg}")
+        # 超额拦截通知：只通知财务（当前审核人）和申请创建人（承包方），不通知合同管理员
         notify_create(db, p.created_by, "支付申请被拦截（超概算）", f"{p.code}：{msg}")
         audit_add(db, u.username, "BLOCK", "Payment", str(p.id), msg)
         return {"ok": False, "status": p.status, "is_blocked": True, "reason": msg}

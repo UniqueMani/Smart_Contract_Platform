@@ -36,8 +36,11 @@ def create_change(payload: ChangeCreate, db: Session = Depends(get_db), u: Curre
     # 验证必填字段
     if not payload.contract_id:
         raise HTTPException(400, "合同ID不能为空")
-    if not payload.amount or payload.amount <= 0:
-        raise HTTPException(400, "变更金额必须大于0")
+    if payload.amount is None or payload.amount < 0:
+        raise HTTPException(400, "变更金额不能为负数")
+    # 允许金额为0（可以只变更时间），但需要至少金额或时间有变更
+    if payload.amount == 0 and (not payload.schedule_impact_days or payload.schedule_impact_days == 0):
+        raise HTTPException(400, "变更金额和时间不能同时为0，至少需要变更其中一项")
     if not payload.reason or not payload.reason.strip():
         raise HTTPException(400, "变更原因不能为空")
     if not payload.scope_desc or not payload.scope_desc.strip():
@@ -64,15 +67,22 @@ def create_change(payload: ChangeCreate, db: Session = Depends(get_db), u: Curre
         # flush 以获取 id，但不提交事务
         db.flush()
         # build tasks - 现在 ch.id 已经有值了
-        tasks = build_change_tasks(ch.id, ch.amount)
+        # 传入金额和延长时间，系统会自动合并审批层级，取更严格的
+        tasks = build_change_tasks(ch.id, ch.amount, ch.schedule_impact_days)
         for t in tasks:
             db.add(t)
         # 如果创建了审批任务，说明已进入审批流程，状态改为 APPROVING
         # 如果没有审批任务（理论上不应该发生），保持 SUBMITTED 状态
         if tasks:
             ch.status = "APPROVING"
-        # 通知科员（审批流程第一步）
-        notify_create(db, to_username="owner_staff", title="新的变更申请待处理", content=f"{ch.code} 金额 {ch.amount} 元，请进行科员审核", commit=False)
+        # 通知合同管理员（审批流程第一步）
+        if ch.amount > 0:
+            notify_content = f"{ch.code} 金额 {ch.amount} 元"
+        else:
+            notify_content = f"{ch.code} 时间变更 {ch.schedule_impact_days} 天"
+        if ch.amount > 0 and ch.schedule_impact_days > 0:
+            notify_content = f"{ch.code} 金额 {ch.amount} 元，时间变更 {ch.schedule_impact_days} 天"
+        notify_create(db, to_username="owner_contract", title="新的变更申请待处理", content=f"{notify_content}，请进行合同管理员审核", commit=False)
         audit_add(db, u.username, "CREATE", "Change", str(ch.id), f"submit change {ch.code}", commit=False)
         db.commit()
         db.refresh(ch)
@@ -242,20 +252,76 @@ def approve_task(task_id: int, payload: TaskAction, db: Session = Depends(get_db
         if is_all_approved(tasks):
             ch.status="APPROVED"
             db.add(ch)
-            # 变更通过后：触发支付额度重算（demo：不做复杂，只记录审计+通知）
-            notify_create(db, "owner_finance", "变更审批通过", f"{ch.code} 已通过，建议检查支付额度重算", commit=False)
-            notify_create(db, ch.created_by, "变更审批通过", f"{ch.code} 已通过", commit=False)
+            # 变更通过后：更新合同信息
+            c = contract_get(db, ch.contract_id)
+            if c:
+                update_messages = []
+                # 更新合同价（如果有金额变更）
+                if ch.amount > 0:
+                    old_contract_price = c.contract_price
+                    c.contract_price = round(c.contract_price + ch.amount, 2)
+                    update_messages.append(f"合同价从 {old_contract_price} 调整为 {c.contract_price}（变更金额：{ch.amount}）")
+                
+                # 更新合同结束日期（如果有时间变更）
+                if ch.schedule_impact_days > 0 and c.end_date:
+                    from datetime import timedelta
+                    old_end_date = c.end_date
+                    c.end_date = c.end_date + timedelta(days=ch.schedule_impact_days)
+                    update_messages.append(f"合同结束日期从 {old_end_date.strftime('%Y-%m-%d')} 延长至 {c.end_date.strftime('%Y-%m-%d')}（延长 {ch.schedule_impact_days} 天）")
+                elif ch.schedule_impact_days > 0 and not c.end_date:
+                    # 如果合同没有结束日期，但需要延长，可以设置一个默认日期
+                    from datetime import timedelta
+                    if c.start_date:
+                        c.end_date = c.start_date + timedelta(days=ch.schedule_impact_days)
+                        update_messages.append(f"合同结束日期设置为 {c.end_date.strftime('%Y-%m-%d')}（延长 {ch.schedule_impact_days} 天）")
+                
+                if update_messages:
+                    contract_update(db, c, commit=False)
+                    audit_msg = f"变更审批通过，{'；'.join(update_messages)}"
+                    audit_add(db, u.username, "UPDATE", "Contract", str(c.id), audit_msg, commit=False)
+                
+                # 生成通知内容
+                notify_details = []
+                if ch.amount > 0:
+                    notify_details.append("合同价已更新")
+                if ch.schedule_impact_days > 0:
+                    notify_details.append("合同结束日期已更新")
+                notify_detail_text = "，".join(notify_details) if notify_details else "变更已生效"
+                
+                # 变更审批通过后：通知财务（需要重算支付额度）和申请创建人（承包方）
+                # 不通知合同管理员，因为合同管理员主要负责合同创建和变更申请的第一步审批
+                notify_create(db, "owner_finance", "变更审批通过", f"{ch.code} 已通过，{notify_detail_text}，建议检查支付额度重算", commit=False)
+                notify_create(db, ch.created_by, "变更审批通过", f"{ch.code} 已通过，{notify_detail_text}", commit=False)
             audit_add(db, u.username, "APPROVE", "Change", str(ch.id), "all steps approved", commit=False)
         else:
             nxt = next_pending_task(tasks)
             if nxt:
-                # 通知下一个角色（demo: 发固定账号名）
-                role_to_user = {
-                    "OWNER_CONTRACT": "owner_contract",
-                    "OWNER_LEGAL": "owner_legal",
-                    "OWNER_LEADER": "owner_leader",
-                }
-                to_user = role_to_user.get(nxt.assignee_role, "owner_contract")
+                # 根据角色和级别查找对应的用户
+                if nxt.assignee_role == "OWNER_LEADER" and nxt.required_level:
+                    # 对于领导角色，需要根据级别查找对应的用户
+                    from app.models.user import User
+                    target_user = db.query(User).filter(
+                        User.role == "OWNER_LEADER",
+                        User.level == nxt.required_level
+                    ).first()
+                    if target_user:
+                        to_user = target_user.username
+                    else:
+                        # 如果找不到对应级别的用户，使用默认映射
+                        level_to_user = {
+                            "SECTION_CHIEF": "owner_leader_section",
+                            "DIRECTOR": "owner_leader_director",
+                            "BUREAU_CHIEF": "owner_leader",
+                        }
+                        to_user = level_to_user.get(nxt.required_level, "owner_leader")
+                else:
+                    # 对于其他角色，使用固定账号名
+                    role_to_user = {
+                        "OWNER_CONTRACT": "owner_contract",
+                        "OWNER_LEGAL": "owner_legal",
+                        "OWNER_LEADER": "owner_leader",
+                    }
+                    to_user = role_to_user.get(nxt.assignee_role, "owner_contract")
                 notify_create(db, to_user, "变更审批待处理", f"{ch.code} 进入 {nxt.step_name} 节点", commit=False)
                 audit_add(db, u.username, "APPROVE", "ChangeTask", str(t.id), f"approve step {t.step_name}", commit=False)
         db.commit()
