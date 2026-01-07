@@ -34,13 +34,24 @@
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div style="font-weight: 500;">详细条款</div>
-          <el-button 
-            v-if="['OWNER_CONTRACT','ADMIN'].includes(auth.role) && c.status==='DRAFT' && !isEditingClauses" 
-            size="small" 
-            @click="isEditingClauses = true"
-          >
-            编辑
-          </el-button>
+          <div style="display: flex; gap: 8px;">
+            <el-button 
+              v-if="['OWNER_CONTRACT','OWNER_LEGAL','ADMIN'].includes(auth.role) && c.clauses && !isEditingClauses" 
+              size="small" 
+              type="primary"
+              :loading="reviewing"
+              @click="startAIReview"
+            >
+              AI审查
+            </el-button>
+            <el-button 
+              v-if="['OWNER_CONTRACT','ADMIN'].includes(auth.role) && c.status==='DRAFT' && !isEditingClauses" 
+              size="small" 
+              @click="isEditingClauses = true"
+            >
+              编辑
+            </el-button>
+          </div>
         </div>
       </template>
       <div v-if="!isEditingClauses" style="white-space: pre-wrap; line-height: 1.6; min-height: 60px;">
@@ -59,6 +70,73 @@
         </div>
       </div>
     </el-card>
+
+    <!-- AI审查结果对话框 -->
+    <el-dialog v-model="showReviewResult" title="AI审查结果" width="800px">
+      <div v-if="reviewResult">
+        <!-- 合规性评分 -->
+        <div style="margin-bottom: 20px; text-align: center;">
+          <div style="font-size: 14px; color: #666; margin-bottom: 8px;">合规性评分</div>
+          <el-progress 
+            :percentage="reviewResult.compliance_score" 
+            :color="getScoreColor(reviewResult.compliance_score)"
+            :stroke-width="20"
+            :format="(percentage) => `${percentage.toFixed(1)}分`"
+          />
+        </div>
+
+        <!-- 问题列表 -->
+        <div v-if="reviewResult.issues && reviewResult.issues.length > 0" style="margin-bottom: 20px;">
+          <h3 style="margin-bottom: 12px; font-size: 16px;">发现的问题</h3>
+          <el-table :data="reviewResult.issues" border>
+            <el-table-column prop="type" label="类型" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.type === '违规' ? 'danger' : row.type === '风险' ? 'warning' : 'info'">
+                  {{ row.type }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="severity" label="严重程度" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.severity === '高' ? 'danger' : row.severity === '中' ? 'warning' : 'success'">
+                  {{ row.severity }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="location" label="位置" width="120" />
+            <el-table-column prop="description" label="问题描述" />
+            <el-table-column prop="suggestion" label="改进建议" />
+          </el-table>
+        </div>
+
+        <!-- 改进建议 -->
+        <div v-if="reviewResult.suggestions && reviewResult.suggestions.length > 0" style="margin-bottom: 20px;">
+          <h3 style="margin-bottom: 12px; font-size: 16px;">总体改进建议</h3>
+          <ul style="padding-left: 20px; line-height: 1.8;">
+            <li v-for="(suggestion, index) in reviewResult.suggestions" :key="index" style="margin-bottom: 8px;">
+              {{ suggestion }}
+            </li>
+          </ul>
+        </div>
+
+        <!-- 错误信息 -->
+        <div v-if="reviewResult.error" style="color: #f56c6c; margin-top: 20px;">
+          <el-alert type="error" :title="reviewResult.error" :closable="false" />
+        </div>
+
+        <!-- 空结果提示 -->
+        <div v-if="!reviewResult.error && (!reviewResult.issues || reviewResult.issues.length === 0) && (!reviewResult.suggestions || reviewResult.suggestions.length === 0)" style="text-align: center; color: #999; padding: 40px;">
+          未发现明显问题
+        </div>
+      </div>
+      <div v-else style="text-align: center; padding: 40px;">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <div style="margin-top: 12px;">正在审查中...</div>
+      </div>
+      <template #footer>
+        <el-button @click="showReviewResult = false">关闭</el-button>
+      </template>
+    </el-dialog>
 
     <el-tabs style="margin-top: 12px;">
       <el-tab-pane label="变更">
@@ -80,6 +158,7 @@ import { useRoute } from 'vue-router'
 import http from '../api/http'
 import { useAuthStore } from '../store/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
 import PageHeader from '../components/PageHeader.vue'
 
 import ChangeList from '../components/ChangeList.vue'
@@ -92,6 +171,9 @@ const c = ref(null)
 const isEditingClauses = ref(false)
 const editingClauses = ref('')
 const savingClauses = ref(false)
+const reviewing = ref(false)
+const showReviewResult = ref(false)
+const reviewResult = ref(null)
 
 async function load(){
   const { data } = await http.get('/contracts/' + route.params.id)
@@ -153,6 +235,45 @@ async function saveClauses(){
   }finally{
     savingClauses.value = false
   }
+}
+
+async function startAIReview(){
+  if (!c.value || !c.value.clauses || !c.value.clauses.trim()) {
+    ElMessage.warning('合同条款为空，无法进行AI审查')
+    return
+  }
+  
+  try {
+    reviewing.value = true
+    showReviewResult.value = true
+    reviewResult.value = null
+    
+    const { data } = await http.post(`/contracts/${c.value.id}/ai-review`, {})
+    reviewResult.value = data
+    
+    if (data.error) {
+      ElMessage.error(`AI审查失败: ${data.error}`)
+    } else {
+      ElMessage.success('AI审查完成')
+    }
+  } catch (e) {
+    const errorMsg = e?.response?.data?.detail || e?.message || 'AI审查失败'
+    ElMessage.error(errorMsg)
+    reviewResult.value = {
+      error: errorMsg,
+      issues: [],
+      suggestions: [],
+      compliance_score: 0.0
+    }
+  } finally {
+    reviewing.value = false
+  }
+}
+
+function getScoreColor(score) {
+  if (score >= 80) return '#67c23a'
+  if (score >= 60) return '#e6a23c'
+  return '#f56c6c'
 }
 
 onMounted(load)
