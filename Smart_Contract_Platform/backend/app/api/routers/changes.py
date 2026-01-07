@@ -76,7 +76,19 @@ def create_change(payload: ChangeCreate, db: Session = Depends(get_db), u: Curre
         audit_add(db, u.username, "CREATE", "Change", str(ch.id), f"submit change {ch.code}", commit=False)
         db.commit()
         db.refresh(ch)
-        return ChangeOut(**ch.__dict__)
+        # 修复：直接访问属性而不是使用 __dict__
+        return ChangeOut(
+            id=ch.id,
+            code=ch.code,
+            contract_id=ch.contract_id,
+            amount=ch.amount,
+            reason=ch.reason,
+            scope_desc=ch.scope_desc,
+            schedule_impact_days=ch.schedule_impact_days,
+            status=ch.status,
+            created_by=ch.created_by,
+            created_at=ch.created_at,
+        )
     except HTTPException:
         db.rollback()
         raise
@@ -99,11 +111,24 @@ def list_changes(db: Session = Depends(get_db), u: CurrentUser = Depends(get_cur
         c = contract_get(db, ch.contract_id)
         if not c:
             continue
+        # 修复：直接访问属性而不是使用 __dict__
+        change_out = ChangeOut(
+            id=ch.id,
+            code=ch.code,
+            contract_id=ch.contract_id,
+            amount=ch.amount,
+            reason=ch.reason,
+            scope_desc=ch.scope_desc,
+            schedule_impact_days=ch.schedule_impact_days,
+            status=ch.status,
+            created_by=ch.created_by,
+            created_at=ch.created_at,
+        )
         if u.role in ("ADMIN","AUDITOR","OWNER_CONTRACT","OWNER_FINANCE","OWNER_LEGAL","OWNER_LEADER","SUPERVISOR"):
-            res.append(ChangeOut(**ch.__dict__))
+            res.append(change_out)
         elif u.role == "CONTRACTOR":
             if u.company is None or c.contractor_org == u.company:
-                res.append(ChangeOut(**ch.__dict__))
+                res.append(change_out)
     return res
 
 @router.get("/{change_id}", response_model=ChangeOut)
@@ -111,7 +136,19 @@ def get_change(change_id: int, db: Session = Depends(get_db), u: CurrentUser = D
     ch = change_get(db, change_id)
     if not ch:
         raise HTTPException(404, "not found")
-    return ChangeOut(**ch.__dict__)
+    # 修复：直接访问属性而不是使用 __dict__
+    return ChangeOut(
+        id=ch.id,
+        code=ch.code,
+        contract_id=ch.contract_id,
+        amount=ch.amount,
+        reason=ch.reason,
+        scope_desc=ch.scope_desc,
+        schedule_impact_days=ch.schedule_impact_days,
+        status=ch.status,
+        created_by=ch.created_by,
+        created_at=ch.created_at,
+    )
 
 @router.get("/{change_id}/tasks", response_model=list[ChangeTaskOut])
 def get_tasks(change_id: int, db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):
@@ -119,7 +156,21 @@ def get_tasks(change_id: int, db: Session = Depends(get_db), u: CurrentUser = De
     if not ch:
         raise HTTPException(404, "not found")
     tasks = tasks_for_change(db, change_id)
-    return [ChangeTaskOut(**t.__dict__) for t in tasks]
+    # 修复：直接访问属性而不是使用 __dict__
+    return [
+        ChangeTaskOut(
+            id=t.id,
+            change_id=t.change_id,
+            step_order=t.step_order,
+            step_name=t.step_name,
+            assignee_role=t.assignee_role,
+            required_level=t.required_level,
+            status=t.status,
+            comment=t.comment,
+            action_at=t.action_at,
+        )
+        for t in tasks
+    ]
 
 @router.get("/pending/my", response_model=list[ChangeWithTaskOut])
 def get_my_pending_changes(db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):
@@ -133,9 +184,31 @@ def get_my_pending_changes(db: Session = Depends(get_db), u: CurrentUser = Depen
     for task in tasks:
         ch = change_get(db, task.change_id)
         if ch:
+            # 修复：直接访问属性而不是使用 __dict__
             result.append(ChangeWithTaskOut(
-                change=ChangeOut(**ch.__dict__),
-                task=ChangeTaskOut(**task.__dict__)
+                change=ChangeOut(
+                    id=ch.id,
+                    code=ch.code,
+                    contract_id=ch.contract_id,
+                    amount=ch.amount,
+                    reason=ch.reason,
+                    scope_desc=ch.scope_desc,
+                    schedule_impact_days=ch.schedule_impact_days,
+                    status=ch.status,
+                    created_by=ch.created_by,
+                    created_at=ch.created_at,
+                ),
+                task=ChangeTaskOut(
+                    id=task.id,
+                    change_id=task.change_id,
+                    step_order=task.step_order,
+                    step_name=task.step_name,
+                    assignee_role=task.assignee_role,
+                    required_level=task.required_level,
+                    status=task.status,
+                    comment=task.comment,
+                    action_at=task.action_at,
+                )
             ))
     return result
 

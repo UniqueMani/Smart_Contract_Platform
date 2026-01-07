@@ -53,9 +53,9 @@
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100" />
-          <el-table-column prop="created_at" label="提交时间" width="180">
+              <el-table-column prop="created_at" label="提交时间" width="180">
             <template #default="{ row }">
-              {{ new Date(row.created_at).toLocaleString('zh-CN') }}
+              {{ formatDateTime(row.created_at) }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="200">
@@ -131,6 +131,7 @@ import { useAuthStore } from '../store/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '../components/PageHeader.vue'
 import { useRouter } from 'vue-router'
+import { formatDateTime } from '../utils/dateTime'
 
 const auth = useAuthStore()
 const router = useRouter()

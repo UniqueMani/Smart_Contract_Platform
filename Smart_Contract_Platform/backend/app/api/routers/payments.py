@@ -42,7 +42,21 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db), u: Cur
     p = payment_create(db, p)
     notify_create(db, "owner_contract", "新的支付申请待审核", f"{p.code} 金额 {p.amount} 元")
     audit_add(db, u.username, "CREATE", "Payment", str(p.id), f"submit payment {p.code}")
-    return PaymentOut(**p.__dict__)
+    # 修复：直接访问属性而不是使用 __dict__
+    return PaymentOut(
+        id=p.id,
+        code=p.code,
+        contract_id=p.contract_id,
+        amount=p.amount,
+        purpose=p.purpose,
+        progress_desc=p.progress_desc,
+        period=p.period,
+        status=p.status,
+        is_blocked=p.is_blocked,
+        reject_reason=p.reject_reason,
+        created_by=p.created_by,
+        created_at=p.created_at,
+    )
 
 @router.get("", response_model=list[PaymentOut])
 def list_payments(db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):
@@ -52,11 +66,26 @@ def list_payments(db: Session = Depends(get_db), u: CurrentUser = Depends(get_cu
         c = contract_get(db, p.contract_id)
         if not c:
             continue
+        # 修复：直接访问属性而不是使用 __dict__
+        payment_out = PaymentOut(
+            id=p.id,
+            code=p.code,
+            contract_id=p.contract_id,
+            amount=p.amount,
+            purpose=p.purpose,
+            progress_desc=p.progress_desc,
+            period=p.period,
+            status=p.status,
+            is_blocked=p.is_blocked,
+            reject_reason=p.reject_reason,
+            created_by=p.created_by,
+            created_at=p.created_at,
+        )
         if u.role in ("ADMIN","AUDITOR","OWNER_CONTRACT","OWNER_FINANCE","OWNER_LEGAL","OWNER_LEADER","SUPERVISOR"):
-            res.append(PaymentOut(**p.__dict__))
+            res.append(payment_out)
         elif u.role == "CONTRACTOR":
             if u.company is None or c.contractor_org == u.company:
-                res.append(PaymentOut(**p.__dict__))
+                res.append(payment_out)
     return res
 
 @router.get("/{payment_id}", response_model=PaymentOut)
@@ -64,7 +93,21 @@ def get_payment(payment_id: int, db: Session = Depends(get_db), u: CurrentUser =
     p = payment_get(db, payment_id)
     if not p:
         raise HTTPException(404, "not found")
-    return PaymentOut(**p.__dict__)
+    # 修复：直接访问属性而不是使用 __dict__
+    return PaymentOut(
+        id=p.id,
+        code=p.code,
+        contract_id=p.contract_id,
+        amount=p.amount,
+        purpose=p.purpose,
+        progress_desc=p.progress_desc,
+        period=p.period,
+        status=p.status,
+        is_blocked=p.is_blocked,
+        reject_reason=p.reject_reason,
+        created_by=p.created_by,
+        created_at=p.created_at,
+    )
 
 @router.get("/{payment_id}/calc", response_model=PaymentCalcOut)
 def get_calc(payment_id: int, db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):

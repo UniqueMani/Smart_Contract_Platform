@@ -18,9 +18,9 @@
 ```bash
 cd backend
 python -m venv .venv
-# Windows: .venv\Scripts\activate
+Windows: .venv\Scripts\activate
 # macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
+#pip install -r requirements.txt
 python -m app.db.init_db
 uvicorn app.main:app --reload --port 8000
 ```
@@ -99,22 +99,44 @@ npm run dev
 - frontend/src/components：Component（组件）
 
 ## 测试流程示例
-
 1. **合同创建和审核**：
    - 使用 `owner_contract` 账号登录，创建新合同（只有这个角色可以创建）
    - 创建后点击"提交给法务审核"，合同状态变为 APPROVING
    - 使用 `owner_legal` 账号登录，在合同详情页可以看到"法务审核通过"和"法务驳回"按钮
    - 法务审核通过后，合同状态变为 ACTIVE，才能进行后续操作
 
-2. **提交变更申请**：
+2. **监理录入完工比例**：
+   - 使用 `supervisor` 账号登录
+   - 进入合同详情页的"完工比例"标签
+   - 点击"录入完工比例"，填写期次、完工比例、完工情况描述、备注
+   - 输入密码进行电子签章确认
+   - 提交后，完工比例会同步到合同表中
+
+3. **提交变更申请**：
    - 使用 `contractor` 账号登录
    - 进入合同详情页的"变更"标签，创建变更申请（选择不同金额测试不同审批流程）
 
-3. **审核变更申请**：
+4. **审核变更申请**：（目前逐级审批好像失效）
    - 使用 `owner_staff` 账号登录，审核科员级别的变更申请（审批流程第一步）
    - 使用 `owner_leader_section` 账号登录，审核科长级别的变更申请
    - 使用 `owner_leader_director` 账号登录，审核处长级别的变更申请
    - 使用 `owner_leader` 账号登录，审核局长级别的变更申请
 
-4. **查看通知**：
+5. **提交支付申请**：
+   - 使用 `contractor` 账号登录
+   - 进入合同详情页的"支付"标签
+   - 点击"发起支付申请"，填写申请金额、支付事由、工程进度说明、期次（目前提交失败）已修复嘻嘻
+   - 提交后，支付申请进入待审核状态
+
+6. **财务审核支付申请**：
+   - 使用 `owner_finance` 账号登录
+   - 在"审核（合同/财务）"页面的"待财务审核"标签页查看支付申请
+   - 点击"额度"按钮查看支付额度计算（批复概算、完工比例、可支付额度等）
+   - 测试超概算拦截：提交一个超过可申请最大金额的支付申请，财务审核时会自动拦截
+   - 审核通过后，支付申请状态变为 PAID，合同表的已支付累计会更新
+   - 或驳回支付申请，填写驳回原因
+
+7. **查看通知**：
    - 各角色登录后，在首页查看相关通知信息
+   - 包括：审批流转通知、支付结果通知、超概算拦截通知等
+   

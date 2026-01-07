@@ -48,7 +48,27 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db), u: C
         audit_add(db, u.username, "CREATE", "Contract", str(c.id), f"create contract {c.contract_no}", commit=False)
         db.commit()
         db.refresh(c)
-        return ContractOut(**c.__dict__)
+        # 修复：直接访问属性而不是使用 __dict__
+        return ContractOut(
+            id=c.id,
+            contract_no=c.contract_no,
+            contract_name=c.contract_name,
+            project_name=c.project_name,
+            owner_org=c.owner_org,
+            contractor_org=c.contractor_org,
+            tender_price=c.tender_price,
+            contract_price=c.contract_price,
+            performance_bond=c.performance_bond,
+            approved_budget=c.approved_budget,
+            completion_ratio=c.completion_ratio,
+            paid_total=c.paid_total,
+            clauses=c.clauses,
+            start_date=c.start_date,
+            end_date=c.end_date,
+            status=c.status,
+            created_by=c.created_by,
+            created_at=c.created_at,
+        )
     except Exception as e:
         db.rollback()
         raise
@@ -67,14 +87,57 @@ def list_contracts(
     for c in items:
         if can_view(u, c):
             if status is None or c.status == status:
-                res.append(ContractOut(**c.__dict__))
+                # 修复：直接访问属性而不是使用 __dict__
+                res.append(ContractOut(
+                    id=c.id,
+                    contract_no=c.contract_no,
+                    contract_name=c.contract_name,
+                    project_name=c.project_name,
+                    owner_org=c.owner_org,
+                    contractor_org=c.contractor_org,
+                    tender_price=c.tender_price,
+                    contract_price=c.contract_price,
+                    performance_bond=c.performance_bond,
+                    approved_budget=c.approved_budget,
+                    completion_ratio=c.completion_ratio,
+                    paid_total=c.paid_total,
+                    clauses=c.clauses,
+                    start_date=c.start_date,
+                    end_date=c.end_date,
+                    status=c.status,
+                    created_by=c.created_by,
+                    created_at=c.created_at,
+                ))
     return res
 
 @router.get("/pending/legal", response_model=list[ContractOut])
 def get_pending_legal_review(db: Session = Depends(get_db), u: CurrentUser = Depends(require_roles("OWNER_LEGAL", "ADMIN"))):
     """获取待法务审核的合同列表"""
     items = contract_list(db)
-    return [ContractOut(**c.__dict__) for c in items if c.status == "APPROVING"]
+    # 修复：直接访问属性而不是使用 __dict__
+    return [
+        ContractOut(
+            id=c.id,
+            contract_no=c.contract_no,
+            contract_name=c.contract_name,
+            project_name=c.project_name,
+            owner_org=c.owner_org,
+            contractor_org=c.contractor_org,
+            tender_price=c.tender_price,
+            contract_price=c.contract_price,
+            performance_bond=c.performance_bond,
+            approved_budget=c.approved_budget,
+            completion_ratio=c.completion_ratio,
+            paid_total=c.paid_total,
+            clauses=c.clauses,
+            start_date=c.start_date,
+            end_date=c.end_date,
+            status=c.status,
+            created_by=c.created_by,
+            created_at=c.created_at,
+        )
+        for c in items if c.status == "APPROVING"
+    ]
 
 @router.get("/{contract_id}", response_model=ContractOut)
 def get_contract(contract_id: int, db: Session = Depends(get_db), u: CurrentUser = Depends(get_current_user)):
@@ -83,7 +146,27 @@ def get_contract(contract_id: int, db: Session = Depends(get_db), u: CurrentUser
         raise HTTPException(404, "not found")
     if not can_view(u, c):
         raise HTTPException(403, "forbidden")
-    return ContractOut(**c.__dict__)
+    # 修复：直接访问属性而不是使用 __dict__
+    return ContractOut(
+        id=c.id,
+        contract_no=c.contract_no,
+        contract_name=c.contract_name,
+        project_name=c.project_name,
+        owner_org=c.owner_org,
+        contractor_org=c.contractor_org,
+        tender_price=c.tender_price,
+        contract_price=c.contract_price,
+        performance_bond=c.performance_bond,
+        approved_budget=c.approved_budget,
+        completion_ratio=c.completion_ratio,
+        paid_total=c.paid_total,
+        clauses=c.clauses,
+        start_date=c.start_date,
+        end_date=c.end_date,
+        status=c.status,
+        created_by=c.created_by,
+        created_at=c.created_at,
+    )
 
 @router.put("/{contract_id}", response_model=ContractOut)
 def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Depends(get_db), u: CurrentUser = Depends(require_roles("OWNER_CONTRACT", "ADMIN"))):
@@ -107,7 +190,27 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
         audit_add(db, u.username, "UPDATE", "Contract", str(c.id), "update contract", commit=False)
         db.commit()
         db.refresh(c)
-        return ContractOut(**c.__dict__)
+        # 修复：直接访问属性而不是使用 __dict__
+        return ContractOut(
+            id=c.id,
+            contract_no=c.contract_no,
+            contract_name=c.contract_name,
+            project_name=c.project_name,
+            owner_org=c.owner_org,
+            contractor_org=c.contractor_org,
+            tender_price=c.tender_price,
+            contract_price=c.contract_price,
+            performance_bond=c.performance_bond,
+            approved_budget=c.approved_budget,
+            completion_ratio=c.completion_ratio,
+            paid_total=c.paid_total,
+            clauses=c.clauses,
+            start_date=c.start_date,
+            end_date=c.end_date,
+            status=c.status,
+            created_by=c.created_by,
+            created_at=c.created_at,
+        )
     except Exception as e:
         db.rollback()
         raise
