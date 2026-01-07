@@ -15,8 +15,20 @@
               {{ row.change.amount.toLocaleString() }} 元
             </template>
           </el-table-column>
+          <el-table-column prop="change.schedule_impact_days" label="工期影响" width="100">
+            <template #default="{ row }">
+              <span v-if="row.change.schedule_impact_days > 0">
+                {{ row.change.schedule_impact_days }} 天
+              </span>
+              <span v-else style="color: #999;">无</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="change.reason" label="变更原因" />
-          <el-table-column prop="task.step_name" label="当前审核步骤" width="120" />
+          <el-table-column prop="task.step_name" label="当前审核步骤" width="120">
+            <template #default="{ row }">
+              {{ row.task.step_name === '科员' ? '合同管理员' : row.task.step_name }}
+            </template>
+          </el-table-column>
           <el-table-column prop="task.required_level" label="所需级别" width="100">
             <template #default="{ row }">
               <span v-if="row.task.required_level">
@@ -53,9 +65,9 @@
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100" />
-          <el-table-column prop="created_at" label="提交时间" width="180">
+              <el-table-column prop="created_at" label="提交时间" width="180">
             <template #default="{ row }">
-              {{ new Date(row.created_at).toLocaleString('zh-CN') }}
+              {{ formatDateTime(row.created_at) }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="200">
@@ -131,6 +143,7 @@ import { useAuthStore } from '../store/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '../components/PageHeader.vue'
 import { useRouter } from 'vue-router'
+import { formatDateTime } from '../utils/dateTime'
 
 const auth = useAuthStore()
 const router = useRouter()

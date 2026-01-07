@@ -7,3 +7,11 @@ python-jose==3.3.0
 passlib==1.7.4
 python-multipart==0.0.9
 email-validator==2.2.0
+# AI审查功能依赖
+chromadb>=0.4.0
+langchain>=0.1.0
+langchain-community>=0.0.20
+PyPDF2>=3.0.0
+openai>=1.0.0
+httpx>=0.25.0
+sentence-transformers>=2.2.0

@@ -106,6 +106,21 @@ def list_payments(db: Session = Depends(get_db), u: CurrentUser = Depends(get_cu
         c = contract_get(db, p.contract_id)
         if not c:
             continue
+        # 修复：直接访问属性而不是使用 __dict__
+        payment_out = PaymentOut(
+            id=p.id,
+            code=p.code,
+            contract_id=p.contract_id,
+            amount=p.amount,
+            purpose=p.purpose,
+            progress_desc=p.progress_desc,
+            period=p.period,
+            status=p.status,
+            is_blocked=p.is_blocked,
+            reject_reason=p.reject_reason,
+            created_by=p.created_by,
+            created_at=p.created_at,
+        )
         if u.role in ("ADMIN","AUDITOR","OWNER_CONTRACT","OWNER_FINANCE","OWNER_LEGAL","OWNER_LEADER","SUPERVISOR"):
             res.append(to_payment_out(p))
         elif u.role == "CONTRACTOR":
@@ -168,7 +183,7 @@ def finance_approve(payment_id: int, db: Session = Depends(get_db), u: CurrentUs
                f"可申请最大金额={calc.max_apply}，申请金额={p.amount}")
         p.reject_reason = msg
         db.add(p); db.commit(); db.refresh(p)
-        notify_create(db, "owner_contract", "超额支付预警单（demo）", f"{p.code}：{msg}")
+        # 超额拦截通知：只通知财务（当前审核人）和申请创建人（承包方），不通知合同管理员
         notify_create(db, p.created_by, "支付申请被拦截（超概算）", f"{p.code}：{msg}")
         audit_add(db, u.username, "BLOCK", "Payment", str(p.id), msg)
         return {"ok": False, "status": p.status, "is_blocked": True, "reason": msg}

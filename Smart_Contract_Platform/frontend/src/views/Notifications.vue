@@ -5,7 +5,11 @@
     </PageHeader>
 
     <el-table :data="rows" border>
-      <el-table-column prop="created_at" label="时间" width="180" />
+      <el-table-column label="时间" width="180">
+        <template #default="{ row }">
+          {{ formatDateTime(row.created_at) }}
+        </template>
+      </el-table-column>
       <el-table-column prop="title" label="标题" width="220" />
       <el-table-column prop="content" label="内容" />
       <el-table-column prop="is_read" label="已读" width="80">
@@ -28,6 +32,7 @@ import { onMounted, ref } from 'vue'
 import http from '../api/http'
 import { ElMessage } from 'element-plus'
 import PageHeader from '../components/PageHeader.vue'
+import { formatDateTime } from '../utils/dateTime'
 
 const rows = ref([])
 
