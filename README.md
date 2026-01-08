@@ -309,26 +309,6 @@ API文档通过 Swagger UI 自动生成：
 - **数据库**: PostgreSQL
 - **进程管理**: Supervisor
 
-## 🤝 贡献指南
-
-欢迎贡献代码！请遵循以下步骤：
-
-1. Fork 本仓库
-2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启一个 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 📞 联系方式
-
-- **项目维护者**: [Your Name]
-- **邮箱**: your.email@example.com
-- **问题反馈**: [GitHub Issues](https://github.com/your-username/Smart_Contract_Platform/issues)
-
 ## 🙏 致谢
 
 - [FastAPI](https://fastapi.tiangolo.com/) - 现代、快速的 Web 框架
