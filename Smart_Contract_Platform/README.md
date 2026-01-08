@@ -1,142 +1,342 @@
-# 政企工程合同合规变更与支付一体化智慧管理平台 — Demo（Vue3 + Python/FastAPI）
+# 政企工程合同合规变更与支付一体化智慧管理平台
 
-这是一个**可运行的 demo**，用于演示你们规格说明书里的核心流程闭环：
-- 合同起草：模板选择/自动填充（合同价=中标价、履约保证金=中标价×10%）、保存草稿、合规校验（demo 版为规则模拟）
-- 变更：承包方提交变更申请，按金额自动匹配审批层级并流转（demo 内置默认规则）
-- 支付：承包方提交进度款支付申请；系统按 **可支付额度 = 批复概算 × 完工比例** 计算，并在财务审核时执行**超额拦截**，生成预警与通知
-- 工程量：监理录入“完工比例”，用于支付额度计算
-- RBAC：多角色登录，不同角色看到不同菜单；后端接口也做权限校验
-- 审计日志：关键操作留痕
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.6-green.svg)](https://fastapi.tiangolo.com/)
+[![Vue](https://img.shields.io/badge/Vue-3.0-4FC08D.svg)](https://vuejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> 技术栈：
-- 前端：Vue 3 + Vite + Pinia + Vue Router + Element Plus + Axios
-- 后端：FastAPI + SQLAlchemy + SQLite + JWT
+一个基于 Vue3 + FastAPI 的政企工程合同管理平台，提供合同起草、变更审批、支付管理、AI智能审查等核心功能。
 
-## 运行方式
+## 📋 目录
 
-### 1) 启动后端
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [项目结构](#项目结构)
+- [快速开始](#快速开始)
+- [系统架构](#系统架构)
+- [核心功能](#核心功能)
+- [API文档](#api文档)
+- [开发指南](#开发指南)
+- [部署指南](#部署指南)
+- [贡献指南](#贡献指南)
+- [许可证](#许可证)
+
+## ✨ 功能特性
+
+### 核心业务功能
+
+- **📝 合同管理**
+  - 合同创建、编辑、审核
+  - 合同状态流转（草稿 → 审核中 → 生效）
+  - 合同详情查看和条款管理
+  - AI智能合同审查
+
+- **🔄 变更管理**
+  - 变更申请提交
+  - 多级审批流程（按金额和工期自动匹配审批层级）
+  - 变更审批历史追踪
+  - 合同价格和工期自动更新
+
+- **💰 支付管理**
+  - 进度款支付申请
+  - 支付额度自动计算（批复概算 × 完工比例）
+  - 超额拦截和预警
+  - 支付审核流程
+
+- **📊 工程量管理**
+  - 完工比例录入
+  - 电子签章确认
+  - 工程量历史记录
+
+- **🔔 通知系统**
+  - 实时通知推送
+  - 角色化通知过滤
+  - 审批流转提醒
+
+- **📜 审计日志**
+  - 关键操作记录
+  - 操作历史查询
+  - 审计追踪
+
+### AI智能审查
+
+- **🤖 RAG增强的合同审查**
+  - 基于法律文档知识库的智能检索
+  - DeepSeek API驱动的条款分析
+  - 合规性评分和问题识别
+  - 改进建议生成
+
+## 🛠 技术栈
+
+### 后端
+
+- **框架**: FastAPI 0.115.6
+- **ORM**: SQLAlchemy 2.0
+- **数据库**: SQLite (开发) / PostgreSQL (生产)
+- **认证**: JWT (python-jose)
+- **AI服务**: 
+  - DeepSeek API (合同审查)
+  - ChromaDB (向量数据库)
+  - LangChain (RAG框架)
+  - Sentence Transformers (文本嵌入)
+
+### 前端
+
+- **框架**: Vue 3 (Composition API)
+- **构建工具**: Vite
+- **状态管理**: Pinia
+- **路由**: Vue Router
+- **UI组件**: Element Plus
+- **HTTP客户端**: Axios
+
+## 📁 项目结构
+
+```
+Smart_Contract_Platform/
+├── backend/                 # 后端服务
+│   ├── app/                # 应用主目录
+│   │   ├── api/            # API路由
+│   │   ├── core/           # 核心配置
+│   │   ├── crud/           # CRUD操作
+│   │   ├── db/             # 数据库配置
+│   │   ├── models/         # 数据模型
+│   │   ├── schemas/        # Pydantic模式
+│   │   └── services/       # 业务服务
+│   ├── knowledge_base/     # AI知识库
+│   ├── scripts/            # 工具脚本
+│   └── requirements.txt    # Python依赖
+├── frontend/               # 前端应用
+│   ├── src/
+│   │   ├── api/           # API接口
+│   │   ├── components/    # 组件
+│   │   ├── router/        # 路由配置
+│   │   ├── store/         # 状态管理
+│   │   └── views/         # 页面视图
+│   └── package.json       # 前端依赖
+└── README.md              # 项目说明
+```
+
+详细结构说明请参考：
+- [后端文档](./backend/README.md)
+- [前端文档](./frontend/README.md)
+
+## 🚀 快速开始
+
+### 环境要求
+
+- Python 3.9+
+- Node.js 16+
+- npm 或 yarn
+
+### 安装步骤
+
+#### 1. 克隆项目
+
+```bash
+git clone https://github.com/your-username/Smart_Contract_Platform.git
+cd Smart_Contract_Platform
+```
+
+#### 2. 后端设置
+
 ```bash
 cd backend
+
+# 创建虚拟环境
 python -m venv .venv
-Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-#pip install -r requirements.txt
+
+# 激活虚拟环境
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+source .venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填入 DeepSeek API Key
+
+# 初始化数据库
 python -m app.db.init_db
+
+# 初始化AI知识库（可选）
+python scripts/init_knowledge_base.py
+
+# 启动服务
 uvicorn app.main:app --reload --port 8000
 ```
 
-访问：
-- Swagger 文档： http://localhost:8000/docs
+后端服务将在 `http://localhost:8000` 启动
 
-### 2) 启动前端
+#### 3. 前端设置
+
 ```bash
 cd frontend
+
+# 安装依赖
 npm install
+
+# 启动开发服务器
 npm run dev
 ```
 
-访问：
-- 前端： http://localhost:5173
+前端应用将在 `http://localhost:5173` 启动
 
-## 预置账号（密码均满足>=8位）
+### 访问系统
 
-### 发包方角色
-- **科员**： `owner_staff` / `Staff123!` - 变更申请审批流程第一步（所有金额都需要科员审核）
-- **发包方合同管理员**： `owner_contract` / `Owner123!` - **唯一有权限创建合同**的角色，创建合同后提交给法务审核
-- **发包方财务**： `owner_finance` / `Finance123!` - 负责财务审核和支付
-- **发包方法务**： `owner_legal` / `Legal123!` - 审核合同，审核通过后合同变为 ACTIVE 状态
-- **发包方领导（局长）**： `owner_leader` / `Leader123!` - 局长级别，可审核所有金额的变更申请
-- **发包方领导（处长）**： `owner_leader_director` / `Director123!` - 处长级别，可审核≤100万元的变更申请
-- **发包方领导（科长）**： `owner_leader_section` / `Section123!` - 科长级别，可审核≤20万元的变更申请
+- **前端应用**: http://localhost:5173
+- **API文档**: http://localhost:8000/docs
+- **API交互式文档**: http://localhost:8000/redoc
 
-### 其他角色
-- **承包方**： `contractor` / `Contractor123!` - 可提交变更申请和进度款申请
-- **监理**： `supervisor` / `Supervisor123!` - 可录入完工比例
-- **审计**： `auditor` / `Auditor123!` - 可查看审计日志
-- **系统管理员**： `admin` / `Admin123!` - 拥有所有权限
+## 🏗 系统架构
 
-### 变更申请审批规则（按金额分级）
-- **≤5万元**：科员审核 → 科长审核
-- **5-20万元**：科员审核 → 科长审核 → 处长审核
-- **20-100万元**：科员审核 → 科长审核 → 处长审核 → 局长审核
-- **>100万元**：科员审核 → 科长审核 → 处长审核 → 局长审核 → 特批
+```
+┌─────────────────┐
+│   前端 (Vue3)   │
+│  Element Plus   │
+└────────┬────────┘
+         │ HTTP/REST
+         │
+┌────────▼────────┐
+│  后端 (FastAPI) │
+│   JWT认证       │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+┌───▼───┐ ┌──▼──────┐
+│SQLite │ │ChromaDB │
+│数据库  │ │向量数据库│
+└───────┘ └─────────┘
+              │
+         ┌────▼────┐
+         │DeepSeek │
+         │  API    │
+         └─────────┘
+```
 
-> **测试建议**：
-> - 使用 `contractor` 账号提交不同金额的变更申请（如3万、15万、50万、150万）
-> - 使用不同级别的领导账号登录，在"审核（合同/财务）"页面的"变更申请审核"标签页查看和审核
-> - 只有符合职级要求的领导才能看到并审核对应的变更申请
+## 📖 核心功能
 
-## 核心功能
+### 1. 合同管理
 
-### 1. 合同管理流程
-- **合同创建**：只有 `OWNER_CONTRACT` 角色（合同管理员）可以创建合同
-- **合同提交**：合同管理员创建合同后，提交给法务审核（状态变为 APPROVING）
-- **法务审核**：法务可以审核通过（合同变为 ACTIVE）或驳回（退回 DRAFT 状态）
-- **合同生效**：只有法务审核通过后，合同才变为 ACTIVE 状态，才能进行后续的变更和支付操作
+- 合同创建（仅合同管理员）
+- 法务审核流程
+- 合同状态管理
+- AI智能审查
 
-### 2. 变更申请分级审批
-- 系统根据变更金额自动匹配审批层级
-- 不同职级的领导只能看到和审核符合其权限范围的变更申请
-- 审批流程：科员 → 科长 → 处长 → 局长 → 特批（根据金额）
+### 2. 变更审批
 
-### 3. 审核界面
-- 在"审核（合同/财务）"页面新增"变更申请审核"标签页
-- 显示待审核的变更申请列表，包括：
-  - 变更单号、合同ID、金额、变更原因
-  - 当前审核步骤（科员/科长/处长/局长/特批）
-  - 所需级别要求
-- 支持审核通过和驳回操作，可填写审核意见
+- 自动匹配审批层级
+- 多级审批流程
+- 金额和时间双重审批规则
+- 审批历史追踪
 
-### 4. 首页通知
-- 登录后首页显示通知列表
-- 关键节点提醒（审批流转、支付结果、超概算拦截等）
+### 3. 支付管理
 
-## 目录结构（MVC 思路）
-- backend/app/models：Model（SQLAlchemy ORM）
-- backend/app/api/routers：Controller（路由/接口）
-- backend/app/services：Service（业务规则/流程/校验）
-- frontend/src/views：View（页面）
-- frontend/src/components：Component（组件）
+- 支付额度自动计算
+- 超额拦截机制
+- 支付审核流程
+- 支付历史记录
 
-## 测试流程示例
-1. **合同创建和审核**：
-   - 使用 `owner_contract` 账号登录，创建新合同（只有这个角色可以创建）
-   - 创建后点击"提交给法务审核"，合同状态变为 APPROVING
-   - 使用 `owner_legal` 账号登录，在合同详情页可以看到"法务审核通过"和"法务驳回"按钮
-   - 法务审核通过后，合同状态变为 ACTIVE，才能进行后续操作
+### 4. 角色权限
 
-2. **监理录入完工比例**：
-   - 使用 `supervisor` 账号登录
-   - 进入合同详情页的"完工比例"标签
-   - 点击"录入完工比例"，填写期次、完工比例、完工情况描述、备注
-   - 输入密码进行电子签章确认
-   - 提交后，完工比例会同步到合同表中
+系统支持以下角色：
 
-3. **提交变更申请**：
-   - 使用 `contractor` 账号登录
-   - 进入合同详情页的"变更"标签，创建变更申请（选择不同金额测试不同审批流程）
+- **发包方**: 合同管理员、财务、法务、领导（局长/处长/科长）、科员
+- **承包方**: 承包商
+- **监理**: 监理单位
+- **审计**: 审计人员
+- **系统管理员**: 系统管理员
 
-4. **审核变更申请**：（目前逐级审批好像失效）
-   - 使用 `owner_staff` 账号登录，审核科员级别的变更申请（审批流程第一步）
-   - 使用 `owner_leader_section` 账号登录，审核科长级别的变更申请
-   - 使用 `owner_leader_director` 账号登录，审核处长级别的变更申请
-   - 使用 `owner_leader` 账号登录，审核局长级别的变更申请
+详细角色权限请参考 [后端文档](./backend/README.md#角色权限)
 
-5. **提交支付申请**：
-   - 使用 `contractor` 账号登录
-   - 进入合同详情页的"支付"标签
-   - 点击"发起支付申请"，填写申请金额、支付事由、工程进度说明、期次（目前提交失败）已修复嘻嘻
-   - 提交后，支付申请进入待审核状态
+## 📚 API文档
 
-6. **财务审核支付申请**：
-   - 使用 `owner_finance` 账号登录
-   - 在"审核（合同/财务）"页面的"待财务审核"标签页查看支付申请
-   - 点击"额度"按钮查看支付额度计算（批复概算、完工比例、可支付额度等）
-   - 测试超概算拦截：提交一个超过可申请最大金额的支付申请，财务审核时会自动拦截
-   - 审核通过后，支付申请状态变为 PAID，合同表的已支付累计会更新
-   - 或驳回支付申请，填写驳回原因
+API文档通过 Swagger UI 自动生成：
 
-7. **查看通知**：
-   - 各角色登录后，在首页查看相关通知信息
-   - 包括：审批流转通知、支付结果通知、超概算拦截通知等
-   
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+主要API端点：
+
+- `/api/auth/*` - 认证相关
+- `/api/contracts/*` - 合同管理
+- `/api/changes/*` - 变更管理
+- `/api/payments/*` - 支付管理
+- `/api/quantities/*` - 工程量管理
+- `/api/contracts/{id}/ai-review` - AI合同审查
+
+## 🧪 测试账号
+
+系统预置了多个测试账号，详见 [测试账号说明](./backend/README.md#测试账号)
+
+## 🔧 开发指南
+
+### 代码规范
+
+- **Python**: 遵循 PEP 8
+- **JavaScript/Vue**: 遵循 ESLint 规则
+- **提交信息**: 使用约定式提交格式
+
+### 开发流程
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+## 📦 部署指南
+
+### 开发环境
+
+参考 [快速开始](#快速开始) 部分
+
+### 生产环境
+
+详细部署指南请参考：
+
+- [后端部署文档](./backend/README.md#部署)
+- [服务器部署指南](./docs/deployment.md) (待补充)
+
+推荐配置：
+
+- **操作系统**: Ubuntu 22.04 LTS
+- **Web服务器**: Nginx
+- **应用服务器**: Gunicorn/Uvicorn
+- **数据库**: PostgreSQL
+- **进程管理**: Supervisor
+
+## 🤝 贡献指南
+
+欢迎贡献代码！请遵循以下步骤：
+
+1. Fork 本仓库
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启一个 Pull Request
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+## 📞 联系方式
+
+- **项目维护者**: [Your Name]
+- **邮箱**: your.email@example.com
+- **问题反馈**: [GitHub Issues](https://github.com/your-username/Smart_Contract_Platform/issues)
+
+## 🙏 致谢
+
+- [FastAPI](https://fastapi.tiangolo.com/) - 现代、快速的 Web 框架
+- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
+- [Element Plus](https://element-plus.org/) - Vue 3 组件库
+- [DeepSeek](https://www.deepseek.com/) - AI 服务提供商
+- [ChromaDB](https://www.trychroma.com/) - 向量数据库
+
+---
+
+⭐ 如果这个项目对你有帮助，请给一个 Star！
