@@ -6,7 +6,7 @@
 
 后端服务基于 FastAPI 构建，提供 RESTful API 接口和 AI 智能审查功能。
 
-## 📋 目录
+## 目录
 
 - [快速开始](#快速开始)
 - [项目结构](#项目结构)
@@ -19,7 +19,7 @@
 - [开发指南](#开发指南)
 - [部署](#部署)
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 
@@ -57,7 +57,7 @@ uvicorn app.main:app --reload --port 8000
 
 服务将在 `http://localhost:8000` 启动
 
-## 📁 项目结构
+## 项目结构
 
 ```
 backend/
@@ -107,7 +107,7 @@ backend/
 └── .env                    # 环境变量（需创建）
 ```
 
-## ⚙️ 环境配置
+## 环境配置
 
 ### 环境变量
 
@@ -169,7 +169,7 @@ python -m app.db.init_db
 3. 修改 `config.py` 中的数据库连接字符串
 4. 运行初始化脚本
 
-## 🔌 API接口
+## API接口
 
 ### 认证接口
 
@@ -217,7 +217,7 @@ python -m app.db.init_db
 
 详细API文档请访问：http://localhost:8000/docs
 
-## 🤖 AI智能审查
+## AI智能审查
 
 ### 功能说明
 
@@ -248,7 +248,7 @@ AI合同审查功能基于 RAG（检索增强生成）技术，能够：
 
 详细说明请参考 [AI审查功能使用说明](./AI审查功能使用说明.md)
 
-## 👥 角色权限
+## 角色权限
 
 ### 角色定义
 
@@ -277,7 +277,7 @@ def create_contract(...):
     ...
 ```
 
-## 🧪 测试账号
+## 测试账号
 
 ### 发包方角色
 
@@ -300,7 +300,7 @@ def create_contract(...):
 | `auditor` | `Auditor123!` | 审计 | 可查看审计日志 |
 | `admin` | `Admin123!` | 管理员 | 所有权限 |
 
-## 💻 开发指南
+## 开发指南
 
 ### 代码结构
 
@@ -327,7 +327,7 @@ def create_contract(...):
 - 编写文档字符串
 - 添加适当的错误处理
 
-## 🚀 部署
+## 部署
 
 ### 开发环境
 
@@ -366,16 +366,12 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 - `SQLALCHEMY_DATABASE_URI`: 生产数据库连接
 - `DEEPSEEK_API_KEY`: DeepSeek API 密钥
 
-## 📚 相关文档
+## 相关文档
 
 - [AI审查功能使用说明](./AI审查功能使用说明.md)
 - [知识库文档](./knowledge_base/README.md)
 - [脚本文档](./scripts/README.md)
 
-## 🤝 贡献
+## 贡献
 
 欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-MIT License

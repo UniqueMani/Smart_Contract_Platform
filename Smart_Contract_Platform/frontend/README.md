@@ -6,7 +6,7 @@
 
 前端应用基于 Vue 3 + Vite 构建，使用 Element Plus 作为 UI 组件库。
 
-## 📋 目录
+## 目录
 
 - [快速开始](#快速开始)
 - [项目结构](#项目结构)
@@ -15,7 +15,7 @@
 - [开发指南](#开发指南)
 - [构建部署](#构建部署)
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 
@@ -40,7 +40,7 @@ npm run preview
 
 应用将在 `http://localhost:5173` 启动
 
-## 📁 项目结构
+## 项目结构
 
 ```
 frontend/
@@ -125,7 +125,7 @@ frontend/
   - 自动错误处理
   - 请求取消
 
-## 📦 功能模块
+## 功能模块
 
 ### 1. 认证模块
 
@@ -181,7 +181,7 @@ frontend/
 - 日志筛选
 - 日志详情
 
-## 💻 开发指南
+## 开发指南
 
 ### 开发命令
 
@@ -307,7 +307,7 @@ const isAuthenticated = auth.isAuthenticated
 - 角色权限
 - 路由访问权限
 
-## 🎨 样式指南
+## 样式指南
 
 ### 使用 Element Plus 主题
 
@@ -333,7 +333,7 @@ export default defineConfig({
 
 全局样式定义在 `src/styles/app.css` 中。
 
-## 🚀 构建部署
+## 构建部署
 
 ### 开发构建
 
@@ -386,7 +386,7 @@ server {
 VITE_API_BASE_URL=https://api.example.com
 ```
 
-## 📚 相关文档
+## 相关文档
 
 - [Vue 3 文档](https://vuejs.org/)
 - [Vite 文档](https://vitejs.dev/)
@@ -397,7 +397,3 @@ VITE_API_BASE_URL=https://api.example.com
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-MIT License
